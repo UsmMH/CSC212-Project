@@ -1,123 +1,213 @@
+/**
+ * Test class for the Photo Management System.
+ * This class demonstrates the usage of the implemented classes and tests their functionality.
+ */
 public class Test {
-    // Tag categories as constants for better readability
-    private static final String[] ANIMALS = {"cat", "dog", "hedgehog", "bear", "fox", "deer", "rabbit"};
-    private static final String[] INSECTS = {"butterfly", "bee", "ladybug", "ant"};
-    private static final String[] OBJECTS = {"apple", "flower", "tree", "cab", "rock", "bench"};
-    private static final String[] NATURE = {"grass", "wind", "sky", "river", "mountain", "forest"};
-    private static final String[] COLORS = {"green", "red", "blue", "orange", "yellow", "purple"};
-    private static final String[] WEATHER = {"sunny", "cloudy", "rainy", "snowy"};
-    private static final String[] TIMES = {"morning", "noon", "evening", "night"};
-    private static final String[] LOCATIONS = {"park", "beach", "city", "village"};
-    private static final String[] ADJECTIVES = {"fluffy", "tiny", "bright", "calm", "wild"};
-    private static final String[][] TAG_CATEGORIES = {ANIMALS, INSECTS, OBJECTS, NATURE, COLORS, WEATHER, TIMES, LOCATIONS, ADJECTIVES};
-
-    // Album-relevant tag sets (each array represents tags needed for a specific album condition)
-    private static final String[][] ALBUM_TAG_SETS = {
-            {"bear"},                           // Album1: bear
-            {"animal", "grass"},               // Album2: animal AND grass
-            {"animal", "grass", "insect"},     // Album3: animal AND grass AND insect
-            {"sunny"},                         // Album4: sunny
-            {"fluffy", "forest", "blue"},      // Album5: fluffy AND forest AND blue
-            {"insect", "morning"}              // Album6: insect AND morning
-    };
-
-    // Probability of generating a photo that matches an album condition
-    private static final double MATCH_ALBUM_PROBABILITY = 0.8;
-
-    // Toggle to show photo tags in output (set to false to avoid clutter)
-    private static final boolean SHOW_PHOTO_TAGS = false;
-
     public static void main(String[] args) {
-        // --- Basic PhotoManager Test ---
+        // Test basic functionality
+        testBasicFunctionality();
+
+        // Test inverted index functionality
+        testInvertedIndexFunctionality();
+
+        // Compare performance
+        comparePerformance();
+    }
+
+    /**
+     * Tests the basic functionality of the Photo Management System.
+     */
+    private static void testBasicFunctionality() {
+        System.out.println("=============================================");
+        System.out.println("  BASIC FUNCTIONALITY TEST (Standard Implementation)");
+        System.out.println("=============================================");
+
+        // Create a photo manager
         PhotoManager manager = new PhotoManager();
-        addTestPhotos(manager);
 
-        // Create albums for PhotoManager
-        Album[] albums = {
-                new Album("Album1", "bear", manager),
-                new Album("Album2", "animal AND grass", manager),
-                new Album("Album3", "animal AND grass AND insect", manager),
-                new Album("Album4", "sunny", manager),
-                new Album("Album5", "fluffy AND forest AND blue", manager),
-                new Album("Album6", "insect AND morning", manager)
-        };
+        // Create and add photos
+        Photo photo1 = new Photo("hedgehog.jpg", toTagsLinkedList("animal, hedgehog, apple, grass, green"));
+        manager.addPhoto(photo1);
 
-        System.out.println("===== Basic PhotoManager Test =====");
-        System.out.println("Total photos in manager: " + manager.getPhotos().size());
-        System.out.println("Sample photo path: " + manager.getPhotos().get(0).getPath());
-        System.out.println("Sample album name: " + albums[1].getName());
-        System.out.println("Sample album condition: " + albums[1].getCondition());
+        Photo photo2 = new Photo("bear.jpg", toTagsLinkedList("animal, bear, cab, grass, wind"));
+        manager.addPhoto(photo2);
+
+        Photo photo3 = new Photo("orange-butterfly.jpg", toTagsLinkedList("insect, butterfly, flower, color"));
+        manager.addPhoto(photo3);
+
+        // Create albums
+        Album album1 = new Album("Album1", "bear", manager);
+        Album album2 = new Album("Album2", "animal AND grass", manager);
+
+        // Test photo retrieval
+        System.out.println("\nPhoto Details:");
+        System.out.println("  Path: " + photo1.getPath());
+        System.out.println("  Tags: " + tagsToString(photo1.getTags()));
+
+        System.out.println("\nAlbum Details:");
+        System.out.println("  Name: " + album2.getName());
+        System.out.println("  Condition: " + album2.getCondition());
+        System.out.println("  Photos: " + photosToString(album2.getPhotos()));
+        System.out.println("  Tag Comparisons: " + album2.getNbComps());
+
+        // Test photo deletion
+        System.out.println("\nDeleting photo 'bear.jpg'");
+        manager.deletePhoto("bear.jpg");
+        System.out.println("  Album1 photos after deletion: " + photosToString(album1.getPhotos()));
+        System.out.println("  Album2 photos after deletion: " + photosToString(album2.getPhotos()));
+
         System.out.println();
-        printAllAlbums(albums, "Basic");
-
-        // --- Inverted Index Test ---
-        InvIndexPhotoManager indexManager = new InvIndexPhotoManager();
-        addTestPhotos(indexManager);
-
-        // Create albums for InvIndexPhotoManager
-        Album[] optAlbums = {
-                new Album("Album1", "bear", indexManager),
-                new Album("Album2", "animal AND grass", indexManager),
-                new Album("Album3", "animal AND grass AND insect", indexManager),
-                new Album("Album4", "sunny", indexManager),
-                new Album("Album5", "fluffy AND forest AND blue", indexManager),
-                new Album("Album6", "insect AND morning", indexManager)
-        };
-
-        System.out.println("\n===== Inverted Index Test =====");
-        System.out.println("Total photos in manager: " + indexManager.getPhotos().size());
-        System.out.println();
-        printAllAlbums(optAlbums, "Optimized");
-
-        // --- After Deletion Test ---
-        System.out.println("\n===== After Deletion Test =====");
-        System.out.println("Deleting photo: bear.jpg");
-        indexManager.deletePhoto("bear.jpg");
-        System.out.println("Total photos after deletion: " + indexManager.getPhotos().size());
-        System.out.println();
-
-        // Skip optAlbum3 as in the original code
-        Album[] optAlbumsAfterDeletion = {optAlbums[0], optAlbums[1], optAlbums[3], optAlbums[4], optAlbums[5]};
-        printAllAlbums(optAlbumsAfterDeletion, "Optimized After Deletion");
     }
 
-    // Helper to add original and generated photos to a PhotoManager
-    private static void addTestPhotos(PhotoManager manager) {
-        // Add original photos
-        manager.addPhoto(new Photo("hedgehog.jpg", toTagsLinkedList("animal, hedgehog, apple, grass, green")));
-        manager.addPhoto(new Photo("bear.jpg", toTagsLinkedList("animal, bear, cab, grass, wind, insect")));
-        manager.addPhoto(new Photo("orange-butterfly.jpg", toTagsLinkedList("insect, butterfly, flower, color")));
+    /**
+     * Tests the inverted index functionality of the Photo Management System.
+     */
+    private static void testInvertedIndexFunctionality() {
+        System.out.println("=============================================");
+        System.out.println("  INVERTED INDEX FUNCTIONALITY TEST");
+        System.out.println("=============================================");
 
-        // Generate additional test photos
-        generateTestPhotos(manager, 47); // Add 47 more photos for a total of 50
+        // Create an inverted index photo manager
+        InvIndexPhotoManager manager = new InvIndexPhotoManager();
+
+        // Create and add photos
+        Photo photo1 = new Photo("hedgehog.jpg", toTagsLinkedList("animal, hedgehog, apple, grass, green"));
+        manager.addPhoto(photo1);
+
+        Photo photo2 = new Photo("bear.jpg", toTagsLinkedList("animal, bear, cab, grass, wind"));
+        manager.addPhoto(photo2);
+
+        Photo photo3 = new Photo("orange-butterfly.jpg", toTagsLinkedList("insect, butterfly, flower, color"));
+        manager.addPhoto(photo3);
+
+        // Create albums
+        Album album1 = new Album("Album1", "bear", manager);
+        Album album2 = new Album("Album2", "animal AND grass", manager);
+
+        // Test photo retrieval
+        System.out.println("\nAlbum Retrieval:");
+        System.out.println("  Album1 (condition: 'bear'):");
+        System.out.println("    Photos: " + photosToString(album1.getPhotos()));
+        System.out.println("    Tag Comparisons: " + album1.getNbComps());
+
+        System.out.println("  Album2 (condition: 'animal AND grass'):");
+        System.out.println("    Photos: " + photosToString(album2.getPhotos()));
+        System.out.println("    Tag Comparisons: " + album2.getNbComps());
+
+        // Test direct tag-based retrieval
+        System.out.println("\nDirect Tag Retrieval:");
+        System.out.println("  Photos with tag 'animal': " + photosToString(manager.getPhotosByTag("animal")));
+
+        // Test photo deletion
+        System.out.println("\nDeleting photo 'bear.jpg'");
+        manager.deletePhoto("bear.jpg");
+        System.out.println("  Album1 photos after deletion: " + photosToString(album1.getPhotos()));
+        System.out.println("  Album2 photos after deletion: " + photosToString(album2.getPhotos()));
+        System.out.println("  Photos with tag 'animal' after deletion: " + photosToString(manager.getPhotosByTag("animal")));
+
+        System.out.println();
     }
 
-    // Helper to add original and generated photos to an InvIndexPhotoManager
-    private static void addTestPhotos(InvIndexPhotoManager manager) {
-        // Add original photos
-        manager.addPhoto(new Photo("hedgehog.jpg", toTagsLinkedList("animal, hedgehog, apple, grass, green")));
-        manager.addPhoto(new Photo("bear.jpg", toTagsLinkedList("animal, bear, cab, grass, wind, insect")));
-        manager.addPhoto(new Photo("orange-butterfly.jpg", toTagsLinkedList("insect, butterfly, flower, color")));
+    /**
+     * Compares the performance of the regular PhotoManager and the InvIndexPhotoManager.
+     */
+    private static void comparePerformance() {
+        System.out.println("=============================================");
+        System.out.println("  PERFORMANCE COMPARISON");
+        System.out.println("=============================================");
 
-        // Generate additional test photos
-        generateTestPhotos(manager, 47); // Add 47 more photos for a total of 50
-    }
+        // Create a regular photo manager
+        PhotoManager regularManager = new PhotoManager();
 
-    // Helper to print all albums' photos and comparisons
-    private static void printAllAlbums(Album[] albums, String testType) {
-        for (Album album : albums) {
-            LinkedList<Photo> photos = album.getPhotos();
-            System.out.println("--- " + testType + " Album: " + album.getName() + " ---");
-            System.out.println("Condition: " + album.getCondition());
-            System.out.println("Matching photos: " + photos.size());
-            System.out.println("Comparisons: " + album.getNbComps());
-            System.out.println("Photos:");
-            printPhotoList(photos);
-            System.out.println();
+        // Create an inverted index photo manager
+        InvIndexPhotoManager invIndexManager = new InvIndexPhotoManager();
+
+        // Create a larger set of photos
+        int numPhotos = 100;
+        String[] tags = {"animal", "nature", "landscape", "portrait", "city", "beach", "mountain", "forest", "water", "sky"};
+
+        System.out.println("\nGenerating test data with " + numPhotos + " photos...");
+
+        for (int i = 0; i < numPhotos; i++) {
+            // Create a random set of tags for each photo
+            LinkedList<String> photoTags = new LinkedList<>();
+            int numTags = 3 + (int)(Math.random() * 4); // 3 to 6 tags per photo
+
+            for (int j = 0; j < numTags; j++) {
+                int tagIndex = (int)(Math.random() * tags.length);
+                String tag = tags[tagIndex];
+                if (!photoTags.contains(tag)) {
+                    photoTags.insert(tag);
+                }
+            }
+
+            // Create and add the photo to both managers
+            Photo photo = new Photo("photo" + i + ".jpg", photoTags);
+            regularManager.addPhoto(photo);
+            invIndexManager.addPhoto(photo);
         }
-        System.out.println("----------------------------------------");
+
+        // Test simple tag condition
+        String simpleCondition = "animal";
+        Album regularAlbum1 = new Album("RegularAlbum1", simpleCondition, regularManager);
+        Album invIndexAlbum1 = new Album("InvIndexAlbum1", simpleCondition, invIndexManager);
+
+        // Measure performance for simple condition
+        LinkedList<Photo> regularResults1 = regularAlbum1.getPhotos();
+        int regularComps1 = regularAlbum1.getNbComps();
+
+        LinkedList<Photo> invIndexResults1 = invIndexAlbum1.getPhotos();
+        int invIndexComps1 = invIndexAlbum1.getNbComps();
+
+        // Test AND condition
+        String andCondition = "animal AND water";
+        Album regularAlbum2 = new Album("RegularAlbum2", andCondition, regularManager);
+        Album invIndexAlbum2 = new Album("InvIndexAlbum2", andCondition, invIndexManager);
+
+        // Measure performance for AND condition
+        LinkedList<Photo> regularResults2 = regularAlbum2.getPhotos();
+        int regularComps2 = regularAlbum2.getNbComps();
+
+        LinkedList<Photo> invIndexResults2 = invIndexAlbum2.getPhotos();
+        int invIndexComps2 = invIndexAlbum2.getNbComps();
+
+        // Print results
+        System.out.println("\nSimple Condition Test: '" + simpleCondition + "'");
+        System.out.println("  Standard Implementation:");
+        System.out.println("    Photos Found: " + regularResults1.size());
+        System.out.println("    Tag Comparisons: " + regularComps1);
+
+        System.out.println("  Inverted Index Implementation:");
+        System.out.println("    Photos Found: " + invIndexResults1.size());
+        System.out.println("    Tag Comparisons: " + invIndexComps1);
+        System.out.println("    Improvement: " + calculateImprovement(regularComps1, invIndexComps1) + "% fewer comparisons");
+
+        System.out.println("\nAND Condition Test: '" + andCondition + "'");
+        System.out.println("  Standard Implementation:");
+        System.out.println("    Photos Found: " + regularResults2.size());
+        System.out.println("    Tag Comparisons: " + regularComps2);
+
+        System.out.println("  Inverted Index Implementation:");
+        System.out.println("    Photos Found: " + invIndexResults2.size());
+        System.out.println("    Tag Comparisons: " + invIndexComps2);
+        System.out.println("    Improvement: " + calculateImprovement(regularComps2, invIndexComps2) + "% fewer comparisons");
     }
 
+    /**
+     * Calculates the percentage improvement between two values.
+     * @param original The original value
+     * @param improved The improved value
+     * @return The percentage improvement
+     */
+    private static double calculateImprovement(int original, int improved) {
+        return Math.round(((double)(original - improved) / original) * 100.0 * 10.0) / 10.0;
+    }
+
+    /**
+     * Converts a comma-separated string of tags to a LinkedList of tags.
+     * @param tags The comma-separated string of tags
+     * @return A LinkedList containing the tags
+     */
     private static LinkedList<String> toTagsLinkedList(String tags) {
         LinkedList<String> result = new LinkedList<>();
         String[] tagsArray = tags.split("\\s*,\\s*");
@@ -127,94 +217,37 @@ public class Test {
         return result;
     }
 
-    // Prints the list of photos for an album (currently disabled)
-    private static void printPhotoList(LinkedList<Photo> photos) {
-        if (photos.isEmpty()) {
-            System.out.println("  [None]");
-            return;
+    /**
+     * Converts a LinkedList of tags to a string representation.
+     * @param tags The LinkedList of tags
+     * @return A string representation of the tags
+     */
+    private static String tagsToString(LinkedList<String> tags) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < tags.size(); i++) {
+            sb.append(tags.get(i));
+            if (i < tags.size() - 1) {
+                sb.append(", ");
+            }
         }
+        sb.append("]");
+        return sb.toString();
+    }
 
-        // Commented out: printing of photo paths and tags
-        /*
+    /**
+     * Converts a LinkedList of photos to a string representation.
+     * @param photos The LinkedList of photos
+     * @return A string representation of the photos
+     */
+    private static String photosToString(LinkedList<Photo> photos) {
+        StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < photos.size(); i++) {
-            Photo p = photos.get(i);
-            System.out.print("  - " + p.getPath());
-            if (SHOW_PHOTO_TAGS) {
-                System.out.print(" (Tags: ");
-                LinkedList<String> tags = p.getTags();
-                for (int j = 0; j < tags.size(); j++) {
-                    System.out.print(tags.get(j));
-                    if (j < tags.size() - 1) System.out.print(", ");
-                }
-                System.out.print(")");
-            }
-            System.out.println();
-        }
-        */
-    }
-
-    // Helper method to generate test photos for PhotoManager
-    private static void generateTestPhotos(PhotoManager manager, int numPhotos) {
-        for (int i = 1; i <= numPhotos; i++) {
-            String filename = generateFilename(i);
-            String tags = generateTagsWithAlbumBias();
-            Photo photo = new Photo(filename, toTagsLinkedList(tags));
-            manager.addPhoto(photo);
-        }
-    }
-
-    // Helper method to generate test photos for InvIndexPhotoManager
-    private static void generateTestPhotos(InvIndexPhotoManager manager, int numPhotos) {
-        for (int i = 1; i <= numPhotos; i++) {
-            String filename = generateFilename(i);
-            String tags = generateTagsWithAlbumBias();
-            Photo photo = new Photo(filename, toTagsLinkedList(tags));
-            manager.addPhoto(photo);
-        }
-    }
-
-    // Generate a unique filename
-    private static String generateFilename(int index) {
-        String[] types = {ANIMALS[(int)(Math.random() * ANIMALS.length)],
-                INSECTS[(int)(Math.random() * INSECTS.length)]};
-        String type = types[(int)(Math.random() * types.length)];
-        return type + "-" + index + ".jpg";
-    }
-
-    // Generate tags with a bias toward matching album conditions
-    private static String generateTagsWithAlbumBias() {
-        StringBuilder tags = new StringBuilder();
-        int numTags = 3 + (int)(Math.random() * 4); // 3 to 6 tags
-
-        // 80% chance to generate tags that match an album condition
-        if (Math.random() < MATCH_ALBUM_PROBABILITY) {
-            // Pick a random album condition to match
-            String[] albumTags = ALBUM_TAG_SETS[(int)(Math.random() * ALBUM_TAG_SETS.length)];
-
-            // Add all tags required for the album condition
-            for (String tag : albumTags) {
-                tags.append(tag);
-                tags.append(", ");
-            }
-
-            // Add additional random tags to reach the desired number
-            int remainingTags = numTags - albumTags.length;
-            for (int i = 0; i < remainingTags; i++) {
-                String[] category = TAG_CATEGORIES[(int)(Math.random() * TAG_CATEGORIES.length)];
-                String tag = category[(int)(Math.random() * category.length)];
-                tags.append(tag);
-                if (i < remainingTags - 1 || albumTags.length > 0) tags.append(", ");
-            }
-        } else {
-            // Generate completely random tags (as before)
-            for (int i = 0; i < numTags; i++) {
-                String[] category = TAG_CATEGORIES[(int)(Math.random() * TAG_CATEGORIES.length)];
-                String tag = category[(int)(Math.random() * category.length)];
-                tags.append(tag);
-                if (i < numTags - 1) tags.append(", ");
+            sb.append(photos.get(i).getPath());
+            if (i < photos.size() - 1) {
+                sb.append(", ");
             }
         }
-
-        return tags.toString();
+        sb.append("]");
+        return sb.toString();
     }
 }
